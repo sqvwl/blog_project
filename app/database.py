@@ -1,0 +1,5 @@
+users = []
+posts = []
+
+next_user_id = 1
+next_post_id = 1
