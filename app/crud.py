@@ -1,21 +1,31 @@
-from .models import User, Post
-from .database import users, posts, next_user_id, next_post_id
 from datetime import datetime
+from typing import Optional
 
-def create_user(email, login, password):
+from .database import next_post_id, next_user_id, posts, users  # noqa: F401
+from .models import Post, User
+
+
+def create_user(email: str, login: str, password: str) -> User:
     global next_user_id
     user = User(next_user_id, email, login, password)
     users.append(user)
     next_user_id += 1
     return user
 
-def get_user(user_id):
+
+def get_user(user_id: int) -> Optional[User]:
     for u in users:
         if u.id == user_id:
             return u
     return None
 
-def update_user(user_id, email=None, login=None, password=None):
+
+def update_user(
+    user_id: int,
+    email: Optional[str] = None,
+    login: Optional[str] = None,
+    password: Optional[str] = None,
+) -> Optional[User]:
     user = get_user(user_id)
     if not user:
         return None
@@ -28,7 +38,8 @@ def update_user(user_id, email=None, login=None, password=None):
     user.updatedAt = datetime.now()
     return user
 
-def delete_user(user_id):
+
+def delete_user(user_id: int) -> bool:
     global users
     user = get_user(user_id)
     if not user:
@@ -36,20 +47,25 @@ def delete_user(user_id):
     users = [u for u in users if u.id != user_id]
     return True
 
-def create_post(authorId, title, content):
+
+def create_post(authorId: int, title: str, content: str) -> Post:
     global next_post_id
     post = Post(next_post_id, authorId, title, content)
     posts.append(post)
     next_post_id += 1
     return post
 
-def get_post(post_id):
+
+def get_post(post_id: int) -> Optional[Post]:
     for p in posts:
         if p.id == post_id:
             return p
     return None
 
-def update_post(post_id, title=None, content=None):
+
+def update_post(
+    post_id: int, title: Optional[str] = None, content: Optional[str] = None
+) -> Optional[Post]:
     post = get_post(post_id)
     if not post:
         return None
@@ -60,7 +76,8 @@ def update_post(post_id, title=None, content=None):
     post.updatedAt = datetime.now()
     return post
 
-def delete_post(post_id):
+
+def delete_post(post_id: int) -> bool:
     global posts
     post = get_post(post_id)
     if not post:

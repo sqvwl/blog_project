@@ -1,16 +1,20 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr
+
 
 class UserCreate(BaseModel):
     email: EmailStr
     login: str
     password: str
 
+
 class UserUpdate(BaseModel):
     email: Optional[EmailStr]
     login: Optional[str]
     password: Optional[str]
+
 
 class UserResponse(BaseModel):
     id: int
@@ -20,14 +24,17 @@ class UserResponse(BaseModel):
     createdAt: datetime
     updatedAt: datetime
 
+
 class PostCreate(BaseModel):
     authorId: int
     title: str
     content: str
 
+
 class PostUpdate(BaseModel):
     title: Optional[str]
     content: Optional[str]
+
 
 class PostResponse(BaseModel):
     id: int
