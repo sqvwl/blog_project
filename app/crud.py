@@ -1,86 +1,154 @@
 from datetime import datetime
 from typing import Optional
 
-from .database import next_post_id, next_user_id, posts, users  # noqa: F401
-from .models import Post, User
+from sqlalchemy.orm import Session, joinedload
+
+from .models import Comment, Favorite, Like, Post, User
 
 
-def create_user(email: str, login: str, password: str) -> User:
-    global next_user_id
-    user = User(next_user_id, email, login, password)
-    users.append(user)
-    next_user_id += 1
+def create_user(db: Session, email: str, login: str, password: str) -> User:
+    user = User(email=email, login=login, password=password)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
     return user
 
 
-def get_user(user_id: int) -> Optional[User]:
-    for u in users:
-        if u.id == user_id:
-            return u
-    return None
+def get_user(db: Session, user_id: int) -> Optional[User]:
+    return db.query(User).filter(User.id == user_id).first()
 
 
 def update_user(
+    db: Session,
     user_id: int,
     email: Optional[str] = None,
     login: Optional[str] = None,
     password: Optional[str] = None,
 ) -> Optional[User]:
-    user = get_user(user_id)
+    user = get_user(db, user_id)
     if not user:
         return None
-    if email:
+    if email is not None:
         user.email = email
-    if login:
+    if login is not None:
         user.login = login
-    if password:
+    if password is not None:
         user.password = password
-    user.updatedAt = datetime.now()
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(user)
     return user
 
 
-def delete_user(user_id: int) -> bool:
-    global users
-    user = get_user(user_id)
+def delete_user(db: Session, user_id: int) -> bool:
+    user = get_user(db, user_id)
     if not user:
         return False
-    users = [u for u in users if u.id != user_id]
+    db.delete(user)
+    db.commit()
     return True
 
 
-def create_post(authorId: int, title: str, content: str) -> Post:
-    global next_post_id
-    post = Post(next_post_id, authorId, title, content)
-    posts.append(post)
-    next_post_id += 1
+def create_post(db: Session, author_id: int, title: str, content: str) -> Post:
+    post = Post(author_id=author_id, title=title, content=content)
+    db.add(post)
+    db.commit()
+    db.refresh(post)
     return post
 
 
-def get_post(post_id: int) -> Optional[Post]:
-    for p in posts:
-        if p.id == post_id:
-            return p
-    return None
+def get_posts(db: Session):
+    return (
+        db.query(Post)
+        .options(
+            joinedload(Post.author),
+            joinedload(Post.likes),
+            joinedload(Post.comments).joinedload(Comment.user),
+        )
+        .order_by(Post.created_at.desc())
+        .all()
+    )
+
+
+def get_post(db: Session, post_id: int):
+    return (
+        db.query(Post)
+        .options(joinedload(Post.author))
+        .filter(Post.id == post_id)
+        .first()
+    )
 
 
 def update_post(
-    post_id: int, title: Optional[str] = None, content: Optional[str] = None
+    db: Session,
+    post_id: int,
+    title: Optional[str] = None,
+    content: Optional[str] = None,
 ) -> Optional[Post]:
-    post = get_post(post_id)
+    post = get_post(db, post_id)
     if not post:
         return None
-    if title:
+    if title is not None:
         post.title = title
-    if content:
+    if content is not None:
         post.content = content
-    post.updatedAt = datetime.now()
+    post.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(post)
     return post
 
 
-def delete_post(post_id: int) -> bool:
-    global posts
-    post = get_post(post_id)
+def delete_post(db: Session, post_id: int) -> bool:
+    post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         return False
-    posts = [p for p in posts if p.id != post_id]
+    db.delete(post)
+    db.commit()
     return True
+
+
+def add_comment(db: Session, post_id: int, user_id: int, text: str):
+    db_comment = Comment(post_id=post_id, user_id=user_id, text=text)
+    db.add(db_comment)
+    db.commit()
+    db.refresh(db_comment)
+    return db_comment
+
+
+def toggle_like(db: Session, post_id: int, user_id: int):
+    existing_like = (
+        db.query(Like).filter(Like.post_id == post_id,
+                              Like.user_id == user_id).first()
+    )
+    if existing_like:
+        db.delete(existing_like)
+        db.commit()
+        return False
+    new_like = Like(post_id=post_id, user_id=user_id)
+    db.add(new_like)
+    db.commit()
+    return True
+
+
+def get_favorites(db: Session,
+                  user_id: int):
+    return db.query(Post).join(Favorite).filter(Favorite.user_id == user_id).all()
+
+
+def get_user_favorites(db: Session, user_id: int):
+    fav_records = db.query(Favorite).filter(Favorite.user_id == user_id).all()
+    post_ids = [f.post_id for f in fav_records]
+
+    if not post_ids:
+        return []
+
+    return (
+        db.query(Post)
+        .options(
+            joinedload(Post.author),
+            joinedload(Post.comments).joinedload(Comment.user),
+            joinedload(Post.likes),
+        )
+        .filter(Post.id.in_(post_ids))
+        .all()
+    )
