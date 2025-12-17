@@ -23,8 +23,7 @@ app.add_middleware(
 
 
 @app.post("/users/", response_model=schemas.UserResponse)
-def create_user_endpoint(user: schemas.UserCreate,
-                         db: Session = Depends(get_db)):
+def create_user_endpoint(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return crud.create_user(db, user.email, user.login, user.password)
 
 
@@ -56,8 +55,7 @@ def delete_user_endpoint(user_id: int, db: Session = Depends(get_db)):
     return {"message": "User deleted"}
 
 
-@app.post("/posts/",
-          response_model=schemas.PostResponse)
+@app.post("/posts/", response_model=schemas.PostResponse)
 def create_post_endpoint(post: schemas.PostCreate, db: Session = Depends(get_db)):
     return crud.create_post(db, post.author_id, post.title, post.content)
 
@@ -77,14 +75,11 @@ def read_post(post_id: int, db: Session = Depends(get_db)):
 
 @app.put("/posts/{post_id}", response_model=schemas.PostResponse)
 def update_post_endpoint(
-    post_id: int,
-    post: schemas.PostUpdate,
-    db: Session = Depends(get_db)
+    post_id: int, post: schemas.PostUpdate, db: Session = Depends(get_db)
 ):
     updated = crud.update_post(db, post_id, title=post.title, content=post.content)
     if not updated:
-        raise HTTPException(status_code=404,
-                            detail="Post not found")
+        raise HTTPException(status_code=404, detail="Post not found")
     return updated
 
 

@@ -48,3 +48,6 @@ dist/
 .idea/
 *.swp
 *.bak
+
+
+app/__pycache__
